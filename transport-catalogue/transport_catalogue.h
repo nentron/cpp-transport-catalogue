@@ -15,12 +15,18 @@ namespace transport_directory{
     struct Bus;
 
     struct Stop {
+        bool empty() const {
+            return name.empty();
+        }
         std::string name;
         geo::Coordinates coordinates;
         std::unordered_set<Bus *> buses;
     };
 
     struct Bus {
+        bool empty() const {
+            return name.empty();
+        }
         std::string name;
         std::list<Stop*> stops;
     };

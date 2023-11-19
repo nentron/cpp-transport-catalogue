@@ -40,7 +40,7 @@ namespace transport_directory::stat_reader{
 
     void PrintBusStat(const TransportCatalogue& transport_catalogue,
                       std::string_view name, std::ostream& output) {
-        if (transport_catalogue.GetBus(name).name.empty()){
+        if (transport_catalogue.GetBus(name).empty()){
                 output << "Bus"s << ' ' << name << ": not found"s << std::endl;
         } else {
             const auto& bus = transport_catalogue.GetBus(name);
@@ -57,7 +57,7 @@ namespace transport_directory::stat_reader{
     void PrintStopStat(const TransportCatalogue& transport_catalogue,
                       std::string_view name, std::ostream& output) {
 
-        if (transport_catalogue.GetStop(name).name.empty()){
+        if (transport_catalogue.GetStop(name).empty()){
                 output << "Stop"s << ' ' << name << ": not found"s << std::endl;
         } else {
             const Stop& stop = transport_catalogue.GetStop(name);
