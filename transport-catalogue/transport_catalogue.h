@@ -15,30 +15,13 @@ namespace transport_directory{
     struct Bus;
 
     struct Stop {
-
-        explicit operator bool() const {
-            return !name.empty();
-        }
-
-        bool operator!() const {
-            return !operator bool();
-        }
         std::string name;
         geo::Coordinates coordinates;
         std::unordered_set<Bus *> buses;
     };
 
     struct Bus {
-
-        explicit operator bool() const {
-            return !id.empty();
-        }
-
-        bool operator!() const {
-            return !operator bool();
-        }
-
-        std::string id;
+        std::string name;
         std::list<Stop*> stops;
     };
 
@@ -49,14 +32,14 @@ namespace transport_directory{
         std::list<Bus> buses_;
         std::unordered_map<std::string_view, Bus*> busname_to_root_;
     public:
-        void AddStop(std::string name, geo::Coordinates coordinates);
+        void AddStop(const std::string& name, geo::Coordinates coordinates);
 
-        void AddBus(std::string id, std::vector<std::string_view> stops);
+        void AddBus(const std::string& name,
+                    const std::vector<std::string_view>& string_stops);
 
         const Stop& GetStop(std::string_view name) const;
 
         const Bus& GetBus(std::string_view id) const;
-
     };
 
 }

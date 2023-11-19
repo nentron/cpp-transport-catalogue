@@ -108,13 +108,14 @@ namespace transport_directory::input_reader{
         using namespace std::literals;
         for (const auto& command : commands_){
             if (command && command.command == "Stop"s ){
-                catalogue.AddStop(command.id, ParseCoordinates(command.description));
+                catalogue.AddStop(command.id,
+                                 std::move(ParseCoordinates(command.description)));
             }
         }
 
         for (const auto& command : commands_){
             if (command && command.command == "Bus"s){
-                catalogue.AddBus(command.id, std::move(ParseRoute(command.description)));
+                catalogue.AddBus(command.id, ParseRoute(command.description));
             }
         }
     }

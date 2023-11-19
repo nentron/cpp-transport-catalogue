@@ -10,6 +10,8 @@
 
 namespace transport_directory::stat_reader{
 
+    using namespace std::literals;
+
     std::pair<std::string_view, std::string_view> ParseCommand(std::string_view str){
         auto trimed_str = input_reader::Trim(str);
         auto mid_space = trimed_str.find_first_of(' ');
@@ -22,6 +24,7 @@ namespace transport_directory::stat_reader{
     {
         double result = 0.0;
         Stop* previos_stop = nullptr;
+
         for (const auto& stop : stops){
             if (previos_stop == nullptr){
                 previos_stop = stop;
@@ -30,50 +33,64 @@ namespace transport_directory::stat_reader{
             result += ComputeDistance(previos_stop -> coordinates, stop -> coordinates);
             previos_stop = stop;
         }
+
         return result;
     }
 
 
-    void ParseAndPrintStat(const TransportCatalogue& transport_catalogue, std::string_view request,
-                        std::ostream& output) {
-        using namespace std::literals;
-        const auto& [command, id] = ParseCommand(request);
-        if (command == "Bus"s){
-            if (!transport_catalogue.GetBus(id)){
-                output << command << ' ' << id << ": not found"s << std::endl;
+    void PrintBusStat(const TransportCatalogue& transport_catalogue,
+                      std::string_view name, std::ostream& output) {
+        if (transport_catalogue.GetBus(name).name.empty()){
+                output << "Bus"s << ' ' << name << ": not found"s << std::endl;
+        } else {
+            const auto& bus = transport_catalogue.GetBus(name);
+            const double root_dist = RootDistance(bus.stops);
+            std::unordered_set<Stop *> unique_stops{bus.stops.begin(), bus.stops.end()};
+            output << std::setprecision(6);
+            output << "Bus "s << bus.name << ": "s << bus.stops.size() << " stops on route, ";
+            output << unique_stops.size() << " unique stops, "s << root_dist;
+            output << " route length"s << std::endl;
+        }
+    }
+
+
+    void PrintStopStat(const TransportCatalogue& transport_catalogue,
+                      std::string_view name, std::ostream& output) {
+
+        if (transport_catalogue.GetStop(name).name.empty()){
+                output << "Stop"s << ' ' << name << ": not found"s << std::endl;
+        } else {
+            const Stop& stop = transport_catalogue.GetStop(name);
+
+            if (stop.buses.empty()){
+                output << "Stop"s << ' ' << name << ": no buses"s << std::endl;
             } else {
-                const auto& bus = transport_catalogue.GetBus(id);
-                const double root_dist = RootDistance(bus.stops);
-                std::unordered_set<Stop *> unique_stops{bus.stops.begin(), bus.stops.end()};
-                output << std::setprecision(6);
-                output << "Bus "s << bus.id << ": "s << bus.stops.size() << " stops on route, ";
-                output << unique_stops.size() << " unique stops, "s << root_dist;
-                output << " route length"s << std::endl;
-            }
-        } else if (command == "Stop"s){
-            if (!transport_catalogue.GetStop(id)){
-                output << command << ' ' << id << ": not found"s << std::endl;
-            } else {
-                const Stop& stop = transport_catalogue.GetStop(id);
-                if (stop.buses.empty()){
-                    output << command << ' ' << id << ": no buses"s << std::endl;
-                } else {
-                    std::deque<Bus*> buses{stop.buses.begin(), stop.buses.end()};
-                    std::sort(buses.begin(), buses.end(), [](const Bus* lhs, const Bus* rhs){
-                        return lhs -> id < rhs -> id;
-                    });
-                    output << command << ' ' << id << ": buses "s;
-                    bool is_next = false;
-                    for (const Bus* bus : buses){
-                        if (is_next){
-                            output << ' ';
-                        }
-                        output << bus -> id;
-                        is_next = true;
+                std::deque<Bus*> buses{stop.buses.begin(), stop.buses.end()};
+                std::sort(buses.begin(), buses.end(), [](const Bus* lhs, const Bus* rhs){
+                    return lhs -> name < rhs -> name;
+                });
+                output << "Stop"s << ' ' << name << ": buses "s;
+                bool is_next = false;
+                for (const Bus* bus : buses){
+                    if (is_next){
+                        output << ' ';
                     }
-                    output << std::endl;
+                    output << bus -> name;
+                    is_next = true;
                 }
+                output << std::endl;
             }
+        }
+    }
+
+
+    void ParseAndPrintStat(const TransportCatalogue& transport_catalogue, std::string_view request,
+                           std::ostream& output) {
+        const auto& [command, name] = ParseCommand(request);
+        if (command == "Bus"s){
+            PrintBusStat(transport_catalogue, name, output);
+        } else if (command == "Stop"s){
+            PrintStopStat(transport_catalogue, name, output);
         }
     }
 
