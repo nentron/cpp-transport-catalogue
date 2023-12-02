@@ -37,6 +37,25 @@ namespace transport_directory::stat_reader{
         return result;
     }
 
+    int RealDistance(const TransportCatalogue& transport_catalogue,
+        const std::list<Stop *>& stops)
+    {
+        int result = 0;
+        Stop* previos_stop = nullptr;
+
+        for (const auto& stop : stops){
+            if (previos_stop == nullptr){
+                previos_stop = stop;
+                continue;
+            }
+            result += transport_catalogue.GetDistance(
+                previos_stop, stop
+            );
+            previos_stop = stop;
+        }
+
+        return result;
+    }
 
     void PrintBusStat(const TransportCatalogue& transport_catalogue,
                       std::string_view name, std::ostream& output) {
@@ -44,12 +63,14 @@ namespace transport_directory::stat_reader{
                 output << "Bus"s << ' ' << name << ": not found"s << std::endl;
         } else {
             const auto& bus = transport_catalogue.GetBus(name);
-            const double root_dist = RootDistance(bus.stops);
+            const double geo_dist = RootDistance(bus.stops);
+            const int real_dist = RealDistance(transport_catalogue, bus.stops);
             std::unordered_set<Stop *> unique_stops{bus.stops.begin(), bus.stops.end()};
             output << std::setprecision(6);
             output << "Bus "s << bus.name << ": "s << bus.stops.size() << " stops on route, ";
-            output << unique_stops.size() << " unique stops, "s << root_dist;
-            output << " route length"s << std::endl;
+            output << unique_stops.size() << " unique stops, "s << real_dist;
+            output << " route length, "s << (real_dist / geo_dist)
+                << " curvature"s << std::endl;
         }
     }
 

@@ -1,4 +1,5 @@
 #pragma once
+#include <list>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -8,6 +9,7 @@
 
 
 namespace transport_directory::input_reader{
+
     struct CommandDescription {
         // Определяет, задана ли команда (поле command непустое)
         explicit operator bool() const {
@@ -23,6 +25,8 @@ namespace transport_directory::input_reader{
         std::string description;  // Параметры команды
     };
 
+    using command_pointers = std::list<const CommandDescription*>;
+
     class InputReader {
     public:
         /**
@@ -34,6 +38,8 @@ namespace transport_directory::input_reader{
          * Наполняет данными транспортный справочник, используя команды из commands_
          */
         void ApplyCommands(TransportCatalogue& catalogue) const;
+
+        const std::pair<command_pointers, command_pointers> SeparateStopsAndBuses() const;
 
     private:
         std::vector<CommandDescription> commands_;

@@ -33,3 +33,5 @@
 
 build
 .vscode
+.clang-tidy
+test.cpp

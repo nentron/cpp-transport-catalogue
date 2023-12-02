@@ -27,6 +27,15 @@ namespace transport_directory{
         busname_to_root_[bus_pointer -> name] = bus_pointer;
     }
 
+    void TransportCatalogue::AddRealDistance(std::string_view name,
+            std::list<std::pair<std::string_view, int>> stop_dist){
+            Stop* first = stopname_to_stop_.at(name);
+            for (auto [to_stopname, dist] : stop_dist){
+                Stop* second = stopname_to_stop_.at(to_stopname);
+                real_distance_.insert({std::make_pair(first, second), dist});
+            }
+    }
+
     const Stop& TransportCatalogue::GetStop(std::string_view name) const {
         static const Stop& empty_stop = Stop{};
 
@@ -45,6 +54,13 @@ namespace transport_directory{
         }
 
         return *busname_to_root_.at(id);
+    }
+
+    int TransportCatalogue::GetDistance(Stop* const from, Stop* const to_stop) const {
+        if (real_distance_.count(std::make_pair(from, to_stop)) == 0){
+            return real_distance_.at({to_stop, from});
+        }
+        return real_distance_.at({from, to_stop});
     }
 
 }

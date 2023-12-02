@@ -104,18 +104,76 @@ namespace transport_directory::input_reader{
         }
     }
 
-    void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) const {
+    size_t FindSecondComma(std::string_view text) noexcept {
+        size_t first_comma = text.find_first_of(',');
+        size_t second_comma = text.find_first_of(',', first_comma+1);
+        return second_comma;
+    }
+
+    std::list<std::pair<std::string_view, int>> ParseRealDistances(std::string_view text){
+        std::list<std::pair<std::string_view, int>> result;
+
+        auto comma = FindSecondComma(text);
+        while (comma != text.npos){
+            std::pair<std::string_view, int> p;
+
+            size_t num_start = text.find_first_not_of(' ', comma + 1);
+            size_t num_end = text.find_first_of('m', num_start);
+            p.second = std::move(
+                std::stoi(std::string(text.substr(num_start, num_end - num_start + 1)))
+            );
+
+            size_t value_start = text.find_first_not_of(' ', text.find_first_of('t', num_end) + 2);
+            comma = text.find_first_of(',', value_start + 1);
+            size_t value_end = comma == text.npos ? text.size() : comma;
+            p.first = Trim(text.substr(value_start, value_end - value_start));
+
+            result.push_back(std::move(p));
+        }
+
+        return result;
+    }
+
+    const std::pair<command_pointers, command_pointers> InputReader::SeparateStopsAndBuses() const {
         using namespace std::literals;
+
+        command_pointers stops, buses;
+
         for (const auto& command : commands_){
-            if (command && command.command == "Stop"s ){
-                catalogue.AddStop(command.id,
-                                 std::move(ParseCoordinates(command.description)));
+            if (!command){
+                continue;
+            }
+            if (command.command == "Stop"s){
+                const CommandDescription *c = &command;
+                stops.push_back(c);
+            } else if (command.command == "Bus"s){
+                const CommandDescription *c = &command;
+                buses.push_back(c);
             }
         }
 
-        for (const auto& command : commands_){
-            if (command && command.command == "Bus"s){
-                catalogue.AddBus(command.id, ParseRoute(command.description));
+        return std::move(make_pair(stops, buses));
+    }
+
+    void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) const {
+        using namespace std::literals;
+        const auto [stops, buses] = SeparateStopsAndBuses();
+        for (const auto& stop : stops){
+            if (stop){
+                catalogue.AddStop(stop -> id,
+                                 std::move(ParseCoordinates(stop -> description)));
+            }
+        }
+
+        for (const auto& stop : stops){
+            if (stop){
+                catalogue.AddRealDistance(stop -> id,
+                                          std::move(ParseRealDistances(stop -> description)));
+            }
+        }
+        for (const auto& bus : buses){
+            if (bus){
+                catalogue.AddBus(bus -> id, ParseRoute(bus -> description));
             }
         }
     }
