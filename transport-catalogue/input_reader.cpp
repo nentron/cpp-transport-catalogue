@@ -110,28 +110,26 @@ namespace transport_directory::input_reader{
         return second_comma;
     }
 
-    std::list<std::pair<std::string_view, int>> ParseRealDistances(std::string_view text){
-        std::list<std::pair<std::string_view, int>> result;
-
+    void ParseRealDistances(std::string_view stopname, std::string_view text,
+                            TransportCatalogue& catalogue)
+    {
         auto comma = FindSecondComma(text);
-        while (comma != text.npos){
-            std::pair<std::string_view, int> p;
 
+        while (comma != text.npos){
             size_t num_start = text.find_first_not_of(' ', comma + 1);
             size_t num_end = text.find_first_of('m', num_start);
-            p.second = std::move(
+            const int num = std::move(
                 std::stoi(std::string(text.substr(num_start, num_end - num_start + 1)))
             );
 
             size_t value_start = text.find_first_not_of(' ', text.find_first_of('t', num_end) + 2);
             comma = text.find_first_of(',', value_start + 1);
             size_t value_end = comma == text.npos ? text.size() : comma;
-            p.first = Trim(text.substr(value_start, value_end - value_start));
+            const std::string_view stop = Trim(text.substr(value_start, value_end - value_start));
 
-            result.push_back(std::move(p));
+            catalogue.AddRealDistance(stopname, num, stop);
         }
 
-        return result;
     }
 
     const std::pair<command_pointers, command_pointers> InputReader::SeparateStopsAndBuses() const {
@@ -167,8 +165,7 @@ namespace transport_directory::input_reader{
 
         for (const auto& stop : stops){
             if (stop){
-                catalogue.AddRealDistance(stop -> id,
-                                          std::move(ParseRealDistances(stop -> description)));
+                ParseRealDistances(stop -> id, stop -> description, catalogue);
             }
         }
         for (const auto& bus : buses){

@@ -59,8 +59,9 @@ namespace transport_directory{
         void AddBus(const std::string& name,
                     const std::vector<std::string_view>& string_stops);
 
-        void AddRealDistance(std::string_view name,
-            std::list<std::pair<std::string_view, int>> stop_dist);
+        void AddRealDistance(std::string_view from_stopname,
+                             int distance,
+                             std::string_view to_stopname);
 
         const Stop& GetStop(std::string_view name) const;
 
