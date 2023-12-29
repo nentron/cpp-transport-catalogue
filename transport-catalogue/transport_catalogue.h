@@ -1,5 +1,6 @@
 #pragma once
 
+#include "domain.h"
 #include "geo.h"
 
 #include <functional>
@@ -7,31 +8,12 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 
 namespace transport_directory{
 
-    struct Bus;
-
-    struct Stop {
-        bool empty() const {
-            return name.empty();
-        }
-        std::string name;
-        geo::Coordinates coordinates;
-        std::unordered_set<Bus *> buses;
-    };
-
-    struct Bus {
-        bool empty() const {
-            return name.empty();
-        }
-        std::string name;
-        std::list<Stop*> stops;
-    };
-
+    using namespace domain;
 
     struct HashPairOfStops{
         size_t operator()(
@@ -52,22 +34,33 @@ namespace transport_directory{
         std::unordered_map<
             std::pair<Stop *, Stop *>,
             int, HashPairOfStops> real_distance_;
+
+        void AddBusBy(const std::string& name, Bus&& bus, const std::vector<std::string_view>& string_stops);
     public:
+
+        const std::list<Bus>& GetAllBuses() const;
+        const std::list<Stop>& GetAllStops() const;
 
         void AddStop(const std::string& name, geo::Coordinates coordinates);
 
         void AddBus(const std::string& name,
                     const std::vector<std::string_view>& string_stops);
 
+        void AddBus(const std::string& name, bool is_roundtrip,
+                    const std::vector<std::string_view>& string_stops);
         void AddRealDistance(std::string_view from_stopname,
                              int distance,
                              std::string_view to_stopname);
 
-        const Stop& GetStop(std::string_view name) const;
+        const Stop* GetStop(std::string_view name) const;
 
-        const Bus& GetBus(std::string_view id) const;
+        const Bus* GetBus(std::string_view id) const;
 
         int GetDistance(Stop* const from, Stop* const to_stop) const;
     };
 
+    double RootDistance(const std::list<Stop *>& stops);
+
+    int RealDistance(const TransportCatalogue& transport_catalogue,
+        const std::list<Stop *>& stops);
 }

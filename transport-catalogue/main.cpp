@@ -1,34 +1,13 @@
+#include "request_handler.h"
+#include "json_reader.h"
+
 #include <iostream>
-#include <string>
 
-#include "input_reader.h"
-#include "stat_reader.h"
 
-using namespace std;
-
-int main() {
-    using namespace transport_directory;
-
-    TransportCatalogue catalogue;
-
-    int base_request_count = 0;
-    cin >> base_request_count >> ws;
-
-    {
-        input_reader::InputReader reader;
-        for (int i = 0; i < base_request_count; ++i) {
-            string line;
-            getline(cin, line);
-            reader.ParseLine(line);
-        }
-        reader.ApplyCommands(catalogue);
-    }
-
-    int stat_request_count = 0;
-    cin >> stat_request_count >> ws;
-    for (int i = 0; i < stat_request_count; ++i) {
-        string line;
-        getline(cin, line);
-        stat_reader::ParseAndPrintStat(catalogue, line, cout);
-    }
+int main(){
+    json_reader::JSONReader rd;
+    rd.Read(std::cin );
+    map_render::RenderSVG render(rd.GetRenderSettings());
+    request_handler::RequestHandler handler{rd.GetDB(), std::move(render)};
+    handler.ManageRequests(std::cout, rd.GetDocument().GetRoot().AsMap());
 }
