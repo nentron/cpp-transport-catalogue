@@ -13,7 +13,7 @@ namespace domain {
     struct Stop {
         bool Empty() const;
 
-        const auto& GetBuses() const;
+        const std::unordered_set<Bus *>& GetBuses() const;
 
         std::string name;
         geo::Coordinates coordinates;
@@ -22,7 +22,7 @@ namespace domain {
 
     struct Bus {
         bool Empty() const;
-        const auto& GetStops() const;
+        const std::list<Stop*>& GetStops() const;
 
         Bus() = default;
         Bus(const std::string& busname)

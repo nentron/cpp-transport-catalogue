@@ -9,5 +9,5 @@ int main(){
     rd.Read(std::cin );
     map_render::RenderSVG render(rd.GetRenderSettings());
     request_handler::RequestHandler handler{rd.GetDB(), std::move(render)};
-    handler.ManageRequests(std::cout, rd.GetDocument().GetRoot().AsMap());
+    rd.ManageRequests(std::cout, handler);
 }

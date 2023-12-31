@@ -5,7 +5,7 @@ namespace domain {
             return name.empty();
         }
 
-    const auto& Stop::GetBuses() const {
+    const std::unordered_set<Bus*>& Stop::GetBuses() const {
         return buses;
     }
 
@@ -13,7 +13,7 @@ namespace domain {
         return name.empty();
     }
 
-    const auto& Bus::GetStops() const {
+    const std::list<Stop*>& Bus::GetStops() const {
         return stops;
     }
 }

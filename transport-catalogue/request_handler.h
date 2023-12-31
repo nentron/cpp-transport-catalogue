@@ -1,6 +1,6 @@
 #pragma once
 
-#include "json_reader.h"
+
 #include "transport_catalogue.h"
 #include "map_renderer.h"
 
@@ -18,13 +18,15 @@ namespace request_handler {
             : db_(std::move(db))
             , render_(std::move(render)){}
 
-        json::Node BusRequest(const json::Dict& request) const;
+        const Stop* GetStopByName(std::string_view name) const;
 
-        json::Node StopRequest(const json::Dict& request) const;
+        const Bus* GetBusByName(std::string_view name) const;
 
-        json::Node MapRequest(const json::Dict& request) const;
+        const std::list<Stop*>& GetBusStops(std::string_view name) const;
 
-        void ManageRequests(std::ostream& out, const json::Dict& requests) const;
+        const std::unordered_set<Bus*>& GetStopBuses(std::string_view name) const;
+
+        int GetRealDistance(const std::list<Stop*>& stops) const;
 
         void MapRender(std::ostream& out) const;
 

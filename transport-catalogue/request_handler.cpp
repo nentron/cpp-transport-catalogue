@@ -5,80 +5,30 @@
 #include <map>
 #include <sstream>
 
+
 namespace request_handler {
     using namespace std::literals;
-    using namespace json;
 
-    json::Node RequestHandler::BusRequest(const json::Dict& request) const {
-        std::map<std::string, json::Node> temp;
-        temp.emplace("request_id"s, json::Node{request.at("id"s).AsInt()});
-        std::string_view name = request.at("name"s).AsString();
-        if (db_.GetBus(name) -> Empty()){
-            temp.emplace("error_message"s, json::Node{"not found"s});
-        } else {
-            const auto& bus = db_.GetBus(name);
-            const double geo_dist = RootDistance(bus->GetStops());
-            const int real_dist = RealDistance(db_, bus -> GetStops());
-            std::unordered_set<Stop *> unique_stops{bus -> stops.begin(), bus -> stops.end()};
 
-            temp.emplace("route_length"s, Node{real_dist});
-            temp.emplace("stop_count"s, Node{static_cast<int>(bus -> stops.size())});
-            temp.emplace("unique_stop_count"s, Node{static_cast<int>(unique_stops.size())});
-            temp.emplace("curvature"s, Node{real_dist / geo_dist});
-        }
-
-        return std::move(json::Node{temp});
-   }
-
-   json::Node RequestHandler::StopRequest(const json::Dict& request) const {
-        std::map<std::string, json::Node> temp;
-        temp.emplace("request_id"s, json::Node{request.at("id"s).AsInt()});
-        std::string_view name = request.at("name"s).AsString();
-        if (db_.GetStop(name) -> Empty()){
-            temp.emplace("error_message"s, json::Node{"not found"s});
-        } else {
-            const Stop* stop = db_.GetStop(name);
-            Array buses;
-            for (const auto bus : stop -> GetBuses()){
-                buses.push_back(bus -> name);
-            }
-
-            std::sort(buses.begin(), buses.end(), [](const auto& lhs, const auto& rhs){
-                return lhs.AsString() < rhs.AsString();
-            });
-            temp.emplace("buses"s, Node{buses});
-        }
-
-        return std::move(Node{temp});
+    const Bus* RequestHandler::GetBusByName(std::string_view name) const {
+        return db_.GetBus(name);
     }
 
-    json::Node RequestHandler::MapRequest(const json::Dict& request) const {
-        json::Dict dict;
-        dict.emplace("request_id"s, Node{request.at("id").AsInt()});
-        std::ostringstream buffer;
-        buffer.precision(6);
-        MapRender(buffer);
-        dict.emplace("map", Node{buffer.str()});
-        return Node{dict};
+    const Stop* RequestHandler::GetStopByName(std::string_view name) const {
+        return db_.GetStop(name);
     }
 
-    void RequestHandler::ManageRequests(std::ostream& out, const Dict& requests) const {
-        out << std::setprecision(6);
-        Array temper;
+    const std::list<Stop*>& RequestHandler::GetBusStops(std::string_view name) const {
+        return db_.GetBus(name) -> GetStops();
+    }
 
-        for (const auto& request : requests.at("stat_requests"s).AsArray()){
-            const Dict& dict = request.AsMap();
-            if (dict.at("type"s).AsString() == "Bus"s){
-                temper.push_back(BusRequest(dict));
-            } else if (dict.at("type"s).AsString() == "Stop"s) {
-                temper.push_back(StopRequest(dict));
-            } else if (dict.at("type"s).AsString() == "Map"s){
-                temper.push_back(MapRequest(dict));
-            }
-        }
+    const std::unordered_set<Bus*>& RequestHandler::GetStopBuses(std::string_view name) const {
+        return db_.GetStop(name) -> GetBuses();
+    }
 
-        PrintNode(Node{temper}, out);
-   }
+    int RequestHandler::GetRealDistance(const std::list<Stop*>& stops) const {
+        return RealDistance(db_, stops);
+    }
 
 
    void RequestHandler::MapRender(std::ostream& out) const {

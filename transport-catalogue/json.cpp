@@ -238,24 +238,24 @@ Node LoadNode(std::istream& input) {
 }
 }
 
-    const Node::Value& Node::GetValue() const {
-        return value_;
+    const Value& Node::GetValue() const {
+        return *this;
     }
 
     bool Node::IsInt() const {
-        return std::holds_alternative<int>(value_);
+        return std::holds_alternative<int>(*this);
     }
 
     bool Node::IsBool() const {
-        return std::holds_alternative<bool>(value_);
+        return std::holds_alternative<bool>(*this);
     }
 
     bool Node::IsNull() const {
-        return std::holds_alternative<std::nullptr_t>(value_);
+        return std::holds_alternative<std::nullptr_t>(*this);
     }
 
     bool Node::IsPureDouble() const {
-        return std::holds_alternative<double>(value_);
+        return std::holds_alternative<double>(*this);
     }
 
     bool Node::IsDouble() const {
@@ -263,22 +263,22 @@ Node LoadNode(std::istream& input) {
     }
 
     bool Node::IsString() const {
-        return std::holds_alternative<std::string>(value_);
+        return std::holds_alternative<std::string>(*this);
     }
 
     bool Node::IsArray() const {
-        return std::holds_alternative<Array>(value_);
+        return std::holds_alternative<Array>(*this);
     }
 
     bool Node::IsMap() const {
-        return std::holds_alternative<Dict>(value_);
+        return std::holds_alternative<Dict>(*this);
     }
 
     int Node::AsInt() const {
         if (!IsInt()){
             throw std::logic_error("Wrong type requested"s);
         }
-        return std::get<int>(value_);
+        return std::get<int>(*this);
     }
 
     bool Node::AsBool() const {
@@ -286,7 +286,7 @@ Node LoadNode(std::istream& input) {
             throw std::logic_error("Wrong type requested"s);
         }
 
-        return std::get<bool>(value_);
+        return std::get<bool>(*this);
     }
 
     double Node::AsDouble() const {
@@ -294,16 +294,16 @@ Node LoadNode(std::istream& input) {
             throw std::logic_error("Wrong type requested"s);
         }
         if (IsPureDouble()){
-            return std::get<double>(value_);
+            return std::get<double>(*this);
         }
-        return static_cast<double>(std::get<int>(value_));
+        return static_cast<double>(std::get<int>(*this));
     }
 
     const std::string& Node::AsString() const {
         if (!IsString()){
             throw std::logic_error("Wrong type"s);
         }
-        return std::get<std::string>(value_);
+        return std::get<std::string>(*this);
     }
 
     const Dict& Node::AsMap() const {
@@ -311,7 +311,7 @@ Node LoadNode(std::istream& input) {
             throw std::logic_error("Wrong type requested"s);
         }
 
-        return std::get<Dict>(value_);
+        return std::get<Dict>(*this);
     }
 
     const Array& Node::AsArray() const {
@@ -319,7 +319,7 @@ Node LoadNode(std::istream& input) {
             throw std::logic_error("Wrong type requested"s);
         }
 
-        return std::get<Array>(value_);
+        return std::get<Array>(*this);
     }
 
     Document::Document(Node root)

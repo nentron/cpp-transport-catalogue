@@ -1,9 +1,15 @@
 #include "json.h"
 #include "json_reader.h"
 
+#include <sstream>
+
+
 namespace json_reader {
 
     using namespace std::literals;
+    using namespace json;
+
+
     const json::Document& Reader::GetDocument() const {
         return doc_;
     }
@@ -136,4 +142,86 @@ namespace json_reader {
 
         return settings;
     }
+
+
+    json::Node JSONReader::BusRequest(
+        const json::Dict& request,
+        const request_handler::RequestHandler& handler) const {
+
+        std::map<std::string, json::Node> temp;
+        temp.emplace("request_id"s, json::Node{request.at("id"s).AsInt()});
+        std::string_view name = request.at("name"s).AsString();
+        if (handler.GetBusByName(name) -> Empty()){
+            temp.emplace("error_message"s, json::Node{"not found"s});
+        } else {
+            const auto& bus = handler.GetBusByName(name);
+            const double geo_dist = RootDistance(bus -> GetStops());
+            const int real_dist = handler.GetRealDistance(bus -> GetStops());
+            std::unordered_set<Stop *> unique_stops{bus -> stops.begin(), bus -> stops.end()};
+
+            temp.emplace("route_length"s, Node{real_dist});
+            temp.emplace("stop_count"s, Node{static_cast<int>(bus -> stops.size())});
+            temp.emplace("unique_stop_count"s, Node{static_cast<int>(unique_stops.size())});
+            temp.emplace("curvature"s, Node{real_dist / geo_dist});
+        }
+
+        return std::move(json::Node{temp});
+   }
+
+   json::Node JSONReader::StopRequest(
+        const json::Dict& request,
+        const request_handler::RequestHandler& handler) const
+    {
+        std::map<std::string, json::Node> temp;
+        temp.emplace("request_id"s, json::Node{request.at("id"s).AsInt()});
+        std::string_view name = request.at("name"s).AsString();
+        if (handler.GetStopByName(name) -> Empty()){
+            temp.emplace("error_message"s, json::Node{"not found"s});
+        } else {
+            const Stop* stop = handler.GetStopByName(name);
+            Array buses;
+            for (const auto bus : stop -> GetBuses()){
+                buses.push_back(bus -> name);
+            }
+
+            std::sort(buses.begin(), buses.end(), [](const auto& lhs, const auto& rhs){
+                return lhs.AsString() < rhs.AsString();
+            });
+
+            temp.emplace("buses"s, Node{buses});
+        }
+
+        return std::move(Node{temp});
+    }
+
+    json::Node JSONReader::MapRequest(
+        const json::Dict& request,
+        const request_handler::RequestHandler& handler) const
+    {
+        json::Dict dict;
+        dict.emplace("request_id"s, Node{request.at("id").AsInt()});
+        std::ostringstream buffer;
+        buffer.precision(6);
+        handler.MapRender(buffer);
+        dict.emplace("map", Node{buffer.str()});
+        return Node{dict};
+    }
+
+
+    void JSONReader::ManageRequests(std::ostream& out, const request_handler::RequestHandler& handler) const {
+        Array temper;
+
+        for (const auto& request : doc_.GetRoot().AsMap().at("stat_requests"s).AsArray()){
+            const Dict& dict = request.AsMap();
+            if (dict.at("type"s).AsString() == "Bus"s){
+                temper.push_back(BusRequest(dict, handler));
+            } else if (dict.at("type"s).AsString() == "Stop"s) {
+                temper.push_back(StopRequest(dict, handler));
+            } else if (dict.at("type"s).AsString() == "Map"s){
+                temper.push_back(MapRequest(dict, handler));
+            }
+        }
+
+        PrintNode(Node{temper}, out);
+   }
 }
