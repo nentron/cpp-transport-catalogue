@@ -1,23 +1,8 @@
 #include "json.h"
 
-using namespace std;
+#include <iterator>
+
 namespace json {
-
-    bool operator==(const Node& lhs, const Node& rhs){
-        return lhs.GetValue() == rhs.GetValue();
-    }
-
-    bool operator!=(const Node& lhs, const Node& rhs){
-        return lhs.GetValue() != rhs.GetValue();
-    }
-
-    bool operator==(const Document& lhs, const Document& rhs){
-        return lhs.GetRoot() == rhs.GetRoot();
-    }
-
-    bool operator!=(const Document& lhs, const Document& rhs){
-        return lhs.GetRoot() != rhs.GetRoot();
-    }
 
 namespace {
 using namespace std::literals;
@@ -236,185 +221,134 @@ Node LoadNode(std::istream& input) {
             return LoadNumber(input);
     }
 }
+
+struct PrintContext {
+    std::ostream& out;
+    int indent_step = 4;
+    int indent = 0;
+
+    void PrintIndent() const {
+        for (int i = 0; i < indent; ++i) {
+            out.put(' ');
+        }
+    }
+
+    PrintContext Indented() const {
+        return {out, indent_step, indent_step + indent};
+    }
+};
+
+void PrintNode(const Node& value, const PrintContext& ctx);
+
+template <typename Value>
+void PrintValue(const Value& value, const PrintContext& ctx) {
+    ctx.out << value;
 }
 
-    const Value& Node::GetValue() const {
-        return *this;
-    }
-
-    bool Node::IsInt() const {
-        return std::holds_alternative<int>(*this);
-    }
-
-    bool Node::IsBool() const {
-        return std::holds_alternative<bool>(*this);
-    }
-
-    bool Node::IsNull() const {
-        return std::holds_alternative<std::nullptr_t>(*this);
-    }
-
-    bool Node::IsPureDouble() const {
-        return std::holds_alternative<double>(*this);
-    }
-
-    bool Node::IsDouble() const {
-        return IsPureDouble() || IsInt();
-    }
-
-    bool Node::IsString() const {
-        return std::holds_alternative<std::string>(*this);
-    }
-
-    bool Node::IsArray() const {
-        return std::holds_alternative<Array>(*this);
-    }
-
-    bool Node::IsMap() const {
-        return std::holds_alternative<Dict>(*this);
-    }
-
-    int Node::AsInt() const {
-        if (!IsInt()){
-            throw std::logic_error("Wrong type requested"s);
+void PrintString(const std::string& value, std::ostream& out) {
+    out.put('"');
+    for (const char c : value) {
+        switch (c) {
+            case '\r':
+                out << "\\r"sv;
+                break;
+            case '\n':
+                out << "\\n"sv;
+                break;
+            case '\t':
+                out << "\\t"sv;
+                break;
+            case '"':
+                // Символы " и \ выводятся как \" или \\, соответственно
+                [[fallthrough]];
+            case '\\':
+                out.put('\\');
+                [[fallthrough]];
+            default:
+                out.put(c);
+                break;
         }
-        return std::get<int>(*this);
     }
+    out.put('"');
+}
 
-    bool Node::AsBool() const {
-        if (!IsBool()){
-            throw std::logic_error("Wrong type requested"s);
+template <>
+void PrintValue<std::string>(const std::string& value, const PrintContext& ctx) {
+    PrintString(value, ctx.out);
+}
+
+template <>
+void PrintValue<std::nullptr_t>(const std::nullptr_t&, const PrintContext& ctx) {
+    ctx.out << "null"sv;
+}
+
+// В специализации шаблона PrintValue для типа bool параметр value передаётся
+// по константной ссылке, как и в основном шаблоне.
+// В качестве альтернативы можно использовать перегрузку:
+// void PrintValue(bool value, const PrintContext& ctx);
+template <>
+void PrintValue<bool>(const bool& value, const PrintContext& ctx) {
+    ctx.out << (value ? "true"sv : "false"sv);
+}
+
+template <>
+void PrintValue<Array>(const Array& nodes, const PrintContext& ctx) {
+    std::ostream& out = ctx.out;
+    out << "[\n"sv;
+    bool first = true;
+    auto inner_ctx = ctx.Indented();
+    for (const Node& node : nodes) {
+        if (first) {
+            first = false;
+        } else {
+            out << ",\n"sv;
         }
-
-        return std::get<bool>(*this);
+        inner_ctx.PrintIndent();
+        PrintNode(node, inner_ctx);
     }
+    out.put('\n');
+    ctx.PrintIndent();
+    out.put(']');
+}
 
-    double Node::AsDouble() const {
-        if (!IsDouble()){
-            throw std::logic_error("Wrong type requested"s);
+template <>
+void PrintValue<Dict>(const Dict& nodes, const PrintContext& ctx) {
+    std::ostream& out = ctx.out;
+    out << "{\n"sv;
+    bool first = true;
+    auto inner_ctx = ctx.Indented();
+    for (const auto& [key, node] : nodes) {
+        if (first) {
+            first = false;
+        } else {
+            out << ",\n"sv;
         }
-        if (IsPureDouble()){
-            return std::get<double>(*this);
-        }
-        return static_cast<double>(std::get<int>(*this));
+        inner_ctx.PrintIndent();
+        PrintString(key, ctx.out);
+        out << ": "sv;
+        PrintNode(node, inner_ctx);
     }
+    out.put('\n');
+    ctx.PrintIndent();
+    out.put('}');
+}
 
-    const std::string& Node::AsString() const {
-        if (!IsString()){
-            throw std::logic_error("Wrong type"s);
-        }
-        return std::get<std::string>(*this);
-    }
-
-    const Dict& Node::AsMap() const {
-        if (!IsMap()){
-            throw std::logic_error("Wrong type requested"s);
-        }
-
-        return std::get<Dict>(*this);
-    }
-
-    const Array& Node::AsArray() const {
-        if (!IsArray()){
-            throw std::logic_error("Wrong type requested"s);
-        }
-
-        return std::get<Array>(*this);
-    }
-
-    Document::Document(Node root)
-        : root_(std::move(root)){}
-
-    const Node& Document::GetRoot() const {
-        return root_;
-    }
-
-    Document Load(std::istream& input){
-        return Document{LoadNode(input)};
-    }
-
-    void PrintNode(const Node& node, std::ostream& out);
-    void PrintValue(double value, std::ostream& out){
-        out << value;
-    }
-
-    void PrintValue(int value, std::ostream& out){
-        out << value;
-    }
-
-    void PrintValue(std::nullptr_t, std::ostream& out){
-        out << "null"s;
-    }
-
-    void PrintValue(bool value, std::ostream& out){
-        out << std::boolalpha;
-        out << value;
-    }
-
-    void PrintValue(const std::string& value, std::ostream& out){
-        out << '\"';
-        for (const char c : value){
-            switch (c){
-                case '\\':
-                    out << "\\\\"s;
-                    break;
-                case '\"':
-                    out << "\\\""s;
-                    break;
-                case '\r':
-                    out << "\\r"s;
-                    break;
-                case '\n':
-                    out << "\\n"s;
-                    break;
-                case '\t':
-                    out << "\\t"s;
-                    break;
-                default:
-                    out << c;
-                    break;
-            }
-        }
-        out << '\"';
-    }
-
-    void PrintValue(const Array& array, std::ostream& out){
-        out << '[';
-        bool is_next = false;
-        for (const auto& obj : array){
-            if (is_next){
-                out << ", "s;
-            }
-            is_next = true;
-            PrintNode(obj, out);
-        }
-        out << ']';
-    }
-
-    void PrintValue(const Dict& map, std::ostream& out){
-        out << '{';
-        bool is_next = false;
-        for (const auto& [key, value] : map){
-            if (is_next){
-                out << ", "s;
-            }
-            PrintValue(key, out);
-            out << ": "s;
-            PrintNode(value, out);
-            is_next = true;
-        }
-        out << '}';
-    }
-
-
-    void PrintNode(const Node& node, std::ostream& out){
-        std::visit(
-        [&out](const auto& value){ PrintValue(value, out); },
+void PrintNode(const Node& node, const PrintContext& ctx) {
+    std::visit(
+        [&ctx](const auto& value) {
+            PrintValue(value, ctx);
+        },
         node.GetValue());
-    }
-
-
-    void Print(const Document& doc, std::ostream& out){
-        PrintNode(doc.GetRoot(), out);
-    }
 }
+
+}  // namespace
+
+Document Load(std::istream& input) {
+    return Document{LoadNode(input)};
+}
+
+void Print(const Document& doc, std::ostream& output) {
+    PrintNode(doc.GetRoot(), PrintContext{output});
+}
+
+}  // namespace json

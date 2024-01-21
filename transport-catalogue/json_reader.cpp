@@ -1,4 +1,3 @@
-#include "json.h"
 #include "json_reader.h"
 
 #include <sstream>
@@ -22,8 +21,8 @@ namespace json_reader {
 
     void LoadStops(TransportCatalogue& db, const json::Array& data){
         for (const auto& request : data){
-            if (request.AsMap().at("type"s).AsString() == "Stop"s){
-                const auto& request_dict = request.AsMap();
+            if (request.AsDict().at("type"s).AsString() == "Stop"s){
+                const auto& request_dict = request.AsDict();
                 db.AddStop(
                     request_dict.at("name"s).AsString(),
                     std::move(geo::Coordinates{
@@ -38,9 +37,9 @@ namespace json_reader {
 
     void LoadBuses(TransportCatalogue& db, const json::Array& data){
         for (const auto& request : data){
-            const auto& dict = request.AsMap();
+            const auto& dict = request.AsDict();
             if (dict.at("type"s).AsString() == "Stop"s){
-                for (const auto& [name, dist] : dict.at("road_distances"s).AsMap()){
+                for (const auto& [name, dist] : dict.at("road_distances"s).AsDict()){
                     db.AddRealDistance(
                         dict.at("name"s).AsString(),
                         dist.AsInt(),
@@ -75,7 +74,7 @@ namespace json_reader {
     TransportCatalogue JSONReader::GetDB() const {
         TransportCatalogue db;
 
-        const json::Dict& dict = doc_.GetRoot().AsMap();
+        const json::Dict& dict = doc_.GetRoot().AsDict();
         if (dict.count("base_requests"s) != 0){
             LoadStops(db, dict.at("base_requests"s).AsArray());
             LoadBuses(db, dict.at("base_requests"s).AsArray());
@@ -111,7 +110,7 @@ namespace json_reader {
     map_render::RenderSettings JSONReader::GetRenderSettings() const {
         map_render::RenderSettings settings;
 
-        const json::Dict& dict = doc_.GetRoot().AsMap().at("render_settings").AsMap();
+        const json::Dict& dict = doc_.GetRoot().AsDict().at("render_settings").AsDict();
 
         settings.width_ = dict.at("width"s).AsDouble();
         settings.height_ = dict.at("height"s).AsDouble();
@@ -144,39 +143,40 @@ namespace json_reader {
     }
 
 
-    json::Node JSONReader::BusRequest(
+    void JSONReader::BusRequest(
+        json::Builder& builder,
         const json::Dict& request,
         const request_handler::RequestHandler& handler) const {
-
-        std::map<std::string, json::Node> temp;
-        temp.emplace("request_id"s, json::Node{request.at("id"s).AsInt()});
+        
+        builder.StartDict();
+        builder.Key("request_id"s).Value(request.at("id"s).AsInt()); 
         std::string_view name = request.at("name"s).AsString();
         if (handler.GetBusByName(name) -> Empty()){
-            temp.emplace("error_message"s, json::Node{"not found"s});
+            builder.Key("error_message"s).Value("not found"s);
         } else {
             const auto& bus = handler.GetBusByName(name);
             const double geo_dist = RootDistance(bus -> GetStops());
             const int real_dist = handler.GetRealDistance(bus -> GetStops());
             std::unordered_set<Stop *> unique_stops{bus -> stops.begin(), bus -> stops.end()};
 
-            temp.emplace("route_length"s, Node{real_dist});
-            temp.emplace("stop_count"s, Node{static_cast<int>(bus -> stops.size())});
-            temp.emplace("unique_stop_count"s, Node{static_cast<int>(unique_stops.size())});
-            temp.emplace("curvature"s, Node{real_dist / geo_dist});
+            builder.Key("route_length"s).Value(real_dist);
+            builder.Key("stop_count"s).Value(static_cast<int>(bus -> stops.size()));
+            builder.Key("unique_stop_count"s).Value(static_cast<int>(unique_stops.size()));
+            builder.Key("curvature"s).Value(real_dist / geo_dist);
         }
-
-        return std::move(json::Node{temp});
+        builder.EndDict();
    }
 
-   json::Node JSONReader::StopRequest(
+   void JSONReader::StopRequest(
+        json::Builder& builder,
         const json::Dict& request,
         const request_handler::RequestHandler& handler) const
     {
-        std::map<std::string, json::Node> temp;
-        temp.emplace("request_id"s, json::Node{request.at("id"s).AsInt()});
+        builder.StartDict();
+        builder.Key("request_id"s).Value(request.at("id"s).AsInt());
         std::string_view name = request.at("name"s).AsString();
         if (handler.GetStopByName(name) -> Empty()){
-            temp.emplace("error_message"s, json::Node{"not found"s});
+            builder.Key("error_message"s).Value("not found"s);
         } else {
             const Stop* stop = handler.GetStopByName(name);
             Array buses;
@@ -188,40 +188,42 @@ namespace json_reader {
                 return lhs.AsString() < rhs.AsString();
             });
 
-            temp.emplace("buses"s, Node{buses});
+            builder.Key("buses"s).Value(buses);
         }
-
-        return std::move(Node{temp});
+        builder.EndDict();
     }
 
-    json::Node JSONReader::MapRequest(
+    void JSONReader::MapRequest(
+        json::Builder& builder,
         const json::Dict& request,
         const request_handler::RequestHandler& handler) const
     {
-        json::Dict dict;
-        dict.emplace("request_id"s, Node{request.at("id").AsInt()});
+        builder.StartDict();
+        builder.Key("request_id"s).Value(request.at("id"s).AsInt());
         std::ostringstream buffer;
         buffer.precision(6);
         handler.MapRender(buffer);
-        dict.emplace("map", Node{buffer.str()});
-        return Node{dict};
+        builder.Key("map"s).Value(buffer.str());
+        builder.EndDict();
     }
 
 
     void JSONReader::ManageRequests(std::ostream& out, const request_handler::RequestHandler& handler) const {
-        Array temper;
 
-        for (const auto& request : doc_.GetRoot().AsMap().at("stat_requests"s).AsArray()){
-            const Dict& dict = request.AsMap();
+        json::Builder builder = json::Builder{};
+        builder.StartArray();
+
+        for (const auto& request : doc_.GetRoot().AsDict().at("stat_requests"s).AsArray()){
+            const Dict& dict = request.AsDict();
             if (dict.at("type"s).AsString() == "Bus"s){
-                temper.push_back(BusRequest(dict, handler));
+                BusRequest(builder, dict, handler);
             } else if (dict.at("type"s).AsString() == "Stop"s) {
-                temper.push_back(StopRequest(dict, handler));
+                StopRequest(builder, dict, handler);
             } else if (dict.at("type"s).AsString() == "Map"s){
-                temper.push_back(MapRequest(dict, handler));
+                MapRequest(builder, dict, handler);
             }
         }
-
-        PrintNode(Node{temper}, out);
+        builder.EndArray();
+        Print(Document{builder.Build()}, out);
    }
 }

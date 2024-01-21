@@ -1,6 +1,6 @@
 #pragma once
 
-#include "json.h"
+#include "json_builder.h"
 #include "map_renderer.h"
 #include "request_handler.h"
 #include "transport_catalogue.h"
@@ -10,6 +10,7 @@ namespace json_reader{
     using namespace transport_directory;
     class Reader {
     public:
+        Reader() = default;
         virtual ~Reader() = default;
         virtual void Read(std::istream& input) = 0;
         virtual TransportCatalogue GetDB() const = 0;
@@ -28,11 +29,20 @@ namespace json_reader{
         TransportCatalogue GetDB() const override;
         map_render::RenderSettings GetRenderSettings() const override;
 
-        json::Node BusRequest(const json::Dict& request, const request_handler::RequestHandler& handler) const;
+        void BusRequest(
+            json::Builder& builder,
+            const json::Dict& request,
+            const request_handler::RequestHandler& handler) const;
 
-        json::Node StopRequest(const json::Dict& request, const request_handler::RequestHandler& handler) const;
+        void StopRequest(
+            json::Builder& builder,
+            const json::Dict& request,
+            const request_handler::RequestHandler& handler) const;
 
-        json::Node MapRequest(const json::Dict& request, const request_handler::RequestHandler& handler) const;
+        void MapRequest(
+            json::Builder& builder,
+            const json::Dict& request,
+            const request_handler::RequestHandler& handler) const;
 
         void ManageRequests(std::ostream& out, const request_handler::RequestHandler& handler) const;
     };
