@@ -6,91 +6,46 @@ namespace json {
 
     //Builder's helpers
 
-    // SubContext
-
-    SubContext::SubContext(EndContext context)
-        : builder_(std::move(context.builder_)){}
-
-    SubContext::SubContext(DictKeyContext context)
-        : builder_(std::move(context.builder_)){}
-
-    SubContext::SubContext(DictValueContext context)
-        : builder_(std::move(context.builder_)){}
-
-    SubContext::SubContext(ValueContext context)
-        : builder_(std::move(context.builder_)){}
-
-    SubContext::SubContext(End context)
-        : builder_(std::move(context.builder_)){}
-
-    Node SubContext::Build(){
-        return builder_.Build();
-    }
-
-    EndContext SubContext::Value(Node::Value value){
-        return builder_.Value(std::move(value));
-    }
-
-    DictKeyContext SubContext::StartDict(){
-        return builder_.StartDict();
-    }
-
-    EndContext SubContext::EndDict(){
-        return builder_.EndDict();
-    }
-
-    ValueContext SubContext::StartArray(){
-        return builder_.StartArray();
-    }
-
-    EndContext SubContext::EndArray(){
-        return builder_.EndArray();
-    }
-
-    DictValueContext SubContext::Key(std::string key){
-        return builder_.Key(std::move(key));
-    }
-
     //BaseContext
 
     Node BaseContext::Build(){
         return std::move(builder_ -> Build());
     }
 
-    EndContext BaseContext::Value(Node::Value value){
-        return std::move(builder_ -> AddValue(std::move(value)));
+    Builder& BaseContext::Value(Node::Value value){
+        return builder_ -> Value(std::move(value));
     }
 
     DictKeyContext BaseContext::StartDict(){
         return std::move(builder_ -> StartDict());
     }
 
-    EndContext BaseContext::EndDict(){
-        return std::move(builder_ -> EndDict());
+    Builder& BaseContext::EndDict(){
+        return builder_ -> EndDict();
     }
 
-    ValueContext BaseContext::StartArray(){
+    ArrayContext BaseContext::StartArray(){
         return std::move(builder_ -> StartArray());
     }
 
-    EndContext BaseContext::EndArray(){
-        return std::move(builder_ -> EndArray());
+    Builder& BaseContext::EndArray(){
+        return builder_ -> EndArray();
     }
 
     DictValueContext BaseContext::Key(std::string key){
         return std::move(builder_ -> Key(std::move(key)));
     }
 
-    //ArrayValueContext
-
-    ValueContext ValueContext::Value(Node::Value value){
-        return ValueContext{SubContext::Value(std::move(value))};
-    }
-
     //DictValueContext
 
     DictKeyContext DictValueContext::Value(Node::Value value){
-        return DictKeyContext{SubContext::Value(std::move(value))};
+        return DictKeyContext{BaseContext::Value(std::move(value))};
+    }
+
+    //ArrayContext
+
+    ArrayContext ArrayContext::Value(Node::Value value){
+        return ArrayContext{BaseContext::Value(std::move(value))};
     }
 
     //Builder
@@ -150,13 +105,10 @@ namespace json {
         return std::move(DictValueContext{*this});
     }
 
-    EndContext Builder::AddValue(Node::Value value){
-        AddObject(std::move(value), false);
-        return std::move(EndContext{*this});
-    }
 
-    End Builder::Value(Node::Value value){
-        return std::move(End{AddValue(std::move(value))});
+    Builder& Builder::Value(Node::Value value){
+        AddObject(std::move(value), false);
+        return *this;
     }
 
     DictKeyContext Builder::StartDict(){
@@ -164,28 +116,28 @@ namespace json {
         return std::move(DictKeyContext{*this});
     }
 
-    ValueContext Builder::StartArray(){
+    ArrayContext Builder::StartArray(){
         AddObject(Array{}, true);
-        return std::move(ValueContext{*this});
+        return std::move(ArrayContext{*this});
     }
 
-    EndContext Builder::EndDict(){
+    Builder& Builder::EndDict(){
         if (!std::holds_alternative<Dict>(GetCurrentValue())){
             throw std::logic_error("Try to close Dict"s);
         }
 
         nodes_stack_.pop_back();
 
-        return std::move(EndContext{*this});
+        return *this;
     }
 
-    EndContext Builder::EndArray(){
+    Builder& Builder::EndArray(){
         if (!std::holds_alternative<Array>(GetCurrentValue())){
             throw std::logic_error("Try to close Array"s);
         }
 
         nodes_stack_.pop_back();
-        return std::move(EndContext{*this});
+        return *this;
     }
 
 }
