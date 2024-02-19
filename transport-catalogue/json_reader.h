@@ -4,6 +4,7 @@
 #include "map_renderer.h"
 #include "request_handler.h"
 #include "transport_catalogue.h"
+#include "transport_router.h"
 
 
 namespace json_reader{
@@ -29,6 +30,8 @@ namespace json_reader{
         TransportCatalogue GetDB() const override;
         map_render::RenderSettings GetRenderSettings() const override;
 
+        RoutingSettings GetRoutingSettings() const;
+
         void BusRequest(
             json::Builder& builder,
             const json::Dict& request,
@@ -43,6 +46,12 @@ namespace json_reader{
             json::Builder& builder,
             const json::Dict& request,
             const request_handler::RequestHandler& handler) const;
+
+        void RouteRequest(
+            json::Builder& builder,
+            const json::Dict& request,
+            const request_handler::RequestHandler& handler
+        ) const;
 
         void ManageRequests(std::ostream& out, const request_handler::RequestHandler& handler) const;
     };

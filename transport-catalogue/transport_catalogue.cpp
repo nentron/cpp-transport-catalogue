@@ -2,7 +2,7 @@
 
 namespace transport_directory{
 
-        double RootDistance(const std::list<Stop *>& stops)
+        double RootDistance(const std::deque<Stop *>& stops)
     {
         double result = 0.0;
         Stop* previos_stop = nullptr;
@@ -20,7 +20,7 @@ namespace transport_directory{
     }
 
     int RealDistance(const TransportCatalogue& transport_catalogue,
-        const std::list<Stop *>& stops)
+        const std::deque<Stop *>& stops)
     {
         int result = 0;
         Stop* previos_stop = nullptr;
@@ -62,6 +62,7 @@ namespace transport_directory{
 
         busname_to_root_[name] = std::move(bus_pointer);
     }
+
     void TransportCatalogue::AddBus(
         const std::string& name, const std::vector<std::string_view>& string_stops){
 

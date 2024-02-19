@@ -13,7 +13,7 @@ namespace domain {
         return name.empty();
     }
 
-    const std::list<Stop*>& Bus::GetStops() const {
+    const std::deque<Stop*>& Bus::GetStops() const {
         return stops;
     }
 }

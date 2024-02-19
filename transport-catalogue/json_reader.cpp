@@ -207,6 +207,45 @@ namespace json_reader {
         builder.EndDict();
     }
 
+    void JSONReader::RouteRequest(
+            json::Builder& builder,
+            const json::Dict& request,
+            const request_handler::RequestHandler& handler
+        ) const
+    {
+        builder.StartDict();
+        builder.Key("request_id"s).Value(request.at("id"s).AsInt());
+        const auto route = handler.GetRoute(
+            request.at("from"s).AsString(),
+            request.at("to"s).AsString()
+        );
+
+        if (!route){
+            builder.Key("error_message"s).Value("not found"s);
+        } else {
+            builder.Key("total_time"s).Value(route -> weight.time_);
+            builder.Key("items"s).StartArray();
+            for (auto edge_id : route -> edges){
+                const auto& edge = handler.GetHelper().GetEdge(edge_id).weight;
+                builder.StartDict();
+                builder.Key("type"s);
+                if (edge.action_ == RoutesType::BUS){
+                    builder.Value("Bus"s);
+                    builder.Key("bus"s).Value(std::string(edge.name_));
+                    builder.Key("span_count"s).Value(edge.span_counter);
+                } else {
+                    builder.Value("Wait"s);
+                    builder.Key("stop_name"s).Value(std::string(edge.name_));
+                }
+
+                builder.Key("time"s).Value(edge.time_);
+                builder.EndDict();
+            }
+            builder.EndArray();
+        }
+
+        builder.EndDict();
+    }
 
     void JSONReader::ManageRequests(std::ostream& out, const request_handler::RequestHandler& handler) const {
 
@@ -221,9 +260,19 @@ namespace json_reader {
                 StopRequest(builder, dict, handler);
             } else if (dict.at("type"s).AsString() == "Map"s){
                 MapRequest(builder, dict, handler);
+            } else if (dict.at("type"s).AsString() == "Route"s){
+                RouteRequest(builder, dict, handler);
             }
         }
         builder.EndArray();
         Print(Document{builder.Build()}, out);
+   }
+
+   RoutingSettings JSONReader::GetRoutingSettings() const {
+        RoutingSettings settings;
+        const auto& dict_settings = doc_.GetRoot().AsDict().at("routing_settings"s).AsDict();
+        settings.bus_wait_time = dict_settings.at("bus_wait_time"s).AsInt();
+        settings.bus_velocity = dict_settings.at("bus_velocity"s).AsInt();
+        return settings;
    }
 }

@@ -2,7 +2,7 @@
 
 #include "geo.h"
 
-#include <list>
+#include <deque>
 #include <string>
 #include <unordered_set>
 
@@ -22,7 +22,7 @@ namespace domain {
 
     struct Bus {
         bool Empty() const;
-        const std::list<Stop*>& GetStops() const;
+        const std::deque<Stop*>& GetStops() const;
 
         Bus() = default;
         Bus(const std::string& busname)
@@ -33,7 +33,7 @@ namespace domain {
             , is_roundtrip_(is_roundtrip){}
 
         std::string name;
-        std::list<Stop*> stops;
+        std::deque<Stop*> stops;
         bool is_roundtrip_;
     };
 

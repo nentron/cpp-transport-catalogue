@@ -3,6 +3,7 @@
 #include "domain.h"
 #include "geo.h"
 
+#include <deque>
 #include <functional>
 #include <list>
 #include <string>
@@ -59,8 +60,8 @@ namespace transport_directory{
         int GetDistance(Stop* const from, Stop* const to_stop) const;
     };
 
-    double RootDistance(const std::list<Stop *>& stops);
+    double RootDistance(const std::deque<Stop *>& stops);
 
     int RealDistance(const TransportCatalogue& transport_catalogue,
-        const std::list<Stop *>& stops);
+        const std::deque<Stop *>& stops);
 }

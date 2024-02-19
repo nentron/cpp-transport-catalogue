@@ -18,7 +18,7 @@ namespace request_handler {
         return db_.GetStop(name);
     }
 
-    const std::list<Stop*>& RequestHandler::GetBusStops(std::string_view name) const {
+    const std::deque<Stop*>& RequestHandler::GetBusStops(std::string_view name) const {
         return db_.GetBus(name) -> GetStops();
     }
 
@@ -26,7 +26,7 @@ namespace request_handler {
         return db_.GetStop(name) -> GetBuses();
     }
 
-    int RequestHandler::GetRealDistance(const std::list<Stop*>& stops) const {
+    int RequestHandler::GetRealDistance(const std::deque<Stop*>& stops) const {
         return RealDistance(db_, stops);
     }
 
@@ -57,4 +57,20 @@ namespace request_handler {
 
         render_.RenderMap(out, buses, stops);
    }
+
+   std::optional<graph::Router<EdgeWeight>::RouteInfo> RequestHandler::GetRoute(
+    std::string_view from, std::string_view to
+    ) const {
+        if (!helper_.GetVertexId(from)
+            || !helper_.GetVertexId(to)){
+            return {};
+        }
+        return router_.BuildRoute(
+            helper_.GetVertexId(from).value(), helper_.GetVertexId(to).value()
+        );
+    }
+
+    const RouterHelper& RequestHandler::GetHelper() const {
+        return helper_;
+    }
 }
