@@ -8,43 +8,43 @@ namespace json {
 
     //BaseContext
 
-    Node BaseContext::Build(){
-        return std::move(builder_ -> Build());
+    Node Builder::BaseContext::Build(){
+        return std::move(builder_.Build());
     }
 
-    Builder& BaseContext::Value(Node::Value value){
-        return builder_ -> Value(std::move(value));
+    Builder& Builder::BaseContext::Value(Node::Value value){
+        return builder_.Value(std::move(value));
     }
 
-    DictKeyContext BaseContext::StartDict(){
-        return std::move(builder_ -> StartDict());
+    Builder::DictKeyContext Builder::BaseContext::StartDict(){
+        return std::move(builder_.StartDict());
     }
 
-    Builder& BaseContext::EndDict(){
-        return builder_ -> EndDict();
+    Builder& Builder::BaseContext::EndDict(){
+        return builder_.EndDict();
     }
 
-    ArrayContext BaseContext::StartArray(){
-        return std::move(builder_ -> StartArray());
+    Builder::ArrayContext Builder::BaseContext::StartArray(){
+        return std::move(builder_.StartArray());
     }
 
-    Builder& BaseContext::EndArray(){
-        return builder_ -> EndArray();
+    Builder& Builder::BaseContext::EndArray(){
+        return builder_.EndArray();
     }
 
-    DictValueContext BaseContext::Key(std::string key){
-        return std::move(builder_ -> Key(std::move(key)));
+    Builder::DictValueContext Builder::BaseContext::Key(std::string key){
+        return std::move(builder_.Key(std::move(key)));
     }
 
     //DictValueContext
 
-    DictKeyContext DictValueContext::Value(Node::Value value){
+    Builder::DictKeyContext Builder::DictValueContext::Value(Node::Value value){
         return DictKeyContext{BaseContext::Value(std::move(value))};
     }
 
     //ArrayContext
 
-    ArrayContext ArrayContext::Value(Node::Value value){
+    Builder::ArrayContext Builder::ArrayContext::Value(Node::Value value){
         return ArrayContext{BaseContext::Value(std::move(value))};
     }
 
@@ -91,7 +91,7 @@ namespace json {
         return std::move(root_);
     }
 
-    DictValueContext Builder::Key(std::string key){
+    Builder::DictValueContext Builder::Key(std::string key){
         Node::Value& host_value = GetCurrentValue();
 
         if (!std::holds_alternative<Dict>(host_value)){
@@ -111,12 +111,12 @@ namespace json {
         return *this;
     }
 
-    DictKeyContext Builder::StartDict(){
+    Builder::DictKeyContext Builder::StartDict(){
         AddObject(Dict{}, true);
         return std::move(DictKeyContext{*this});
     }
 
-    ArrayContext Builder::StartArray(){
+    Builder::ArrayContext Builder::StartArray(){
         AddObject(Array{}, true);
         return std::move(ArrayContext{*this});
     }
