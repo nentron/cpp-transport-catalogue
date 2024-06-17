@@ -51,7 +51,6 @@ void RouterHelper::LoadGraph(const transport_directory::TransportCatalogue& db){
     }
 }
 
-
 std::optional<graph::VertexId> RouterHelper::GetVertexId(std::string_view name) const {
     if (stopname_to_vertex_id.count(name) == 0){
         return {};
