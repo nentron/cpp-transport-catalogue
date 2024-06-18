@@ -13,7 +13,7 @@ namespace map_render {
         template <typename PointInputIt>
         SphereProjector(PointInputIt points_begin, PointInputIt points_end,
                         double max_width, double max_height, double padding)
-            : padding_(padding) //
+            : padding_(padding)
         {
             if (points_begin == points_end) {
                 return;
